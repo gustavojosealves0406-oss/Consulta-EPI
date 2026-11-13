@@ -1,0 +1,25 @@
+name: atualizar-ca
+on:
+  schedule:
+    - cron: '30 23 * * *'   # 20h30 em Brasília
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Baixar base do MTE
+        run: |
+          curl -fsSL -o base.zip "ftp://ftp.mtps.gov.br/portal/fiscalizacao/seguranca-e-saude-no-trabalho/caepi/tgg_export_caepi.zip"
+          unzip -o base.zip -d extraido
+          ARQ=$(find extraido -type f \( -iname '*.csv' -o -iname '*.txt' \) | head -1)
+          gzip -c "$ARQ" > ca_epi_atual.csv.gz
+      - name: Publicar
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add ca_epi_atual.csv.gz
+          git commit -m "base $(date -I)" || exit 0
+          git push
